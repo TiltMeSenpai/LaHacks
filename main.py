@@ -40,7 +40,7 @@ class PythonHandler(BaseHandler):
         print("Python file recieved: "+str(fileinfo))
         fname = fileinfo['filename']
         with open(str(self.get_secure_cookie('uid'))[2:-1]+'.py', 'w') as f:
-            f.writelines([i+'\n' for i in str(fileinfo['body'])[2:-1].split('\\n')])
+            f.writelines([i+'\n' for i in str(fileinfo['body']).split('\\n')])
         clazz = list(map(__import__, [str(self.get_secure_cookie('uid'))[2:-1]])) #Dynamically import relevant file
         methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz[0]) if inspect.isfunction(i[1])} #Maps function names to input lists
         print(methods)
