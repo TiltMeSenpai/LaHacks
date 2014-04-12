@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<title>
+			Unit Tester
+		</title>
+		<meta charset="UTF-8"/>
+		<meta name="description" content="Unit Tester will suit all your unit testing needs!" />
+		<link href="{{static_url('style.css')}}" rel="stylesheet" type="text/css">
+	</head>
+
+	<body>
+		<h1 id="title">
+			<a href="index.html">Unit Tester</a>
+		</h1>
+		
+		<form id="upload" action="upload/" enctype="multipart/form-data" method="POST"> <!--placeholder in this line-->
+			Select a file for upload: 
+			<input type="file" name="img" onchange="errorCheck(this)"><input id="submit" type="submit" disabled>
+		</form>
+
+		<script>
+			function errorCheck(elem)
+			{
+				var temp = elem.value;
+				if(temp.substring(temp.length-5,temp.length)==".java"){
+					console.log("java");
+					document.getElementById("upload").action="java/";
+					document.getElementById("submit").disabled=false;
+				}else if( temp.substring(temp.length-3,temp.length)==".py"){
+					console.log("python");
+					document.getElementById("upload").action="python/";
+					document.getElementById("submit").disabled=false;
+				}else{
+					alert("wrong file format, please select a .java or .py file");
+					document.getElementById("submit").disabled=true;
+				}
+			}		
+		</script>
+        
+    </body>
+</html>

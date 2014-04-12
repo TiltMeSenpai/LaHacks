@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+{%autoescape None%}
+<html>
+	<head>
+		<title>
+			Unit Tester
+		</title>
+		<meta charset="UTF-8"/>
+		<meta name="description" content="Unit Tester will suit all your unit testing needs!" />
+        <link href="{{static_url('style.css')}}" rel="stylesheet" type="text/css">
+	</head>
+	<body>
+
+		<h1 id="title">
+			<a href="index.html">Unit Tester</a>
+		</h1>
+
+		<form >
+				
+			<div id="selection">
+				Select Function: <select name="function" size="1" id="function">
+					{% for method in methods %}
+                        <option value='{{method}}'>{{method}}</option>
+		            {%end%}	
+                    </select>
+
+				<!-- action needs to be change according to the type-->
+				<form id="post" onclick='send()'>
+					<button name="add" type="submit" value="add" onclick="send()">Add</button>
+				</form>
+
+
+			</div>
+
+			
+
+			<div id="result">
+				<!-- placeholder -->
+			</div>
+
+		</form>
+
+		<script src="http://code.jquery.com/jquery-1.11.0.min.js">
+                var methods = {{json}}
+				$(document).ready(function() {
+	 
+				if(!("WebSocket" in window)){
+					$('<p>Oh no, you need a browser that supports WebSockets. How about <a href="http://www.google.com/chrome">Google Chrome</a>?</p>').appendTo('#container');
+				}else{
+				//The user has WebSockets
+				
+					connect();
+			 
+					function connect(){
+						var socket;
+						var host = "ws://localhost:8080/java"; //need to change this according to python or java
+				 
+						try{
+							var socket = new WebSocket(host);
+				 
+							message('<p class="event">Socket Status: '+socket.readyState);
+				 
+							socket.onopen = function(){
+								message('<p class="event">Socket Status: '+socket.readyState+' (open)');
+							}
+				 
+							socket.onmessage = function(msg){
+								message('<p class="message">Received: '+msg.data);
+							}
+				 
+							socket.onclose = function(){
+								message('<p class="event">Socket Status: '+socket.readyState+' (Closed)');
+							}         
+				 
+						} catch(exception){
+							message('<p>Error'+exception);
+						}
+				 
+						function send(){
+							var target = document.getElementById("function").value;
+				 
+							if(text==""){
+								message('<p class="warning">Please select a function');
+								return ;
+							}
+							try{
+								socket.send(target);
+								message('<p class="event">Sent: '+text)
+				 
+							} catch(exception){
+								message('<p class="warning">');
+							}
+						}
+				 
+                        function message(msg){
+							//placeholder
+							$('#result').append(msg);
+						}
+				 
+						//$('#text').keypress(function(event) {
+						//	if (event.keyCode == '13') {
+						//		send();
+                        //	}
+						//});   
+				 		
+						//$('#disconnect').click(function(){
+						//	socket.close();
+						//});
+				 
+					}//End connect
+			 
+				}//End else
+			 
+			});
+		</script>
+	</body>
+
+</html>
