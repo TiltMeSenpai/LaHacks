@@ -35,26 +35,26 @@ class PythonHandler(BaseHandler):
         self.write("Nope, still wrong")
 
     def post(self):
-        print(self.request.files)
+        print(self.request)
         fileinfo = self.request.files['img'][0]
         print("Python file recieved: "+str(fileinfo))
         fname = fileinfo['filename']
         with open(str(self.get_secure_cookie('uid'))[2:-1]+'.py', 'w') as f:
-            f.writelines([i+'\n' for i in str(fileinfo['body']).split('\\n')])
+            f.writelines([i+'\n' for i in str(fileinfo['body'])[2:-1].split('\\n')]) #For some reason, quotation marks are included. Strip them.
         clazz = list(map(__import__, [str(self.get_secure_cookie('uid'))[2:-1]])) #Dynamically import relevant file
         methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz[0]) if inspect.isfunction(i[1])} #Maps function names to input lists
         print(methods)
-        self.render("python.html", methods = methods, json = json.dumps(methods))
+        self.render("python.html", methods = methods, json = json.dumps(methods), uri = self.request.host)
 
 class HomeHandler(BaseHandler):
     def get(self):
         h = hashlib.new('sha1')
-        h.update(str(random.randint(-10000, 10000)).encode())
+        h.update(str(random.randint(-10000, 10000)).encode()) #Generate randomized user id for files
         self.clear_all_cookies()
-        self.set_secure_cookie('uid', 'a' + str(h.hexdigest()))
+        self.set_secure_cookie('uid', 'a' + str(h.hexdigest())) #Python files must start with a letter
         self.render("index.html")
 
-class JavaWebsocket(tornado.websocket.WebSocketHandler):
+class JavaWebsocket(tornado.websocket.WebSocketHandler): #Not implemented yet
     def get_current_user(self):
         user_id = self.get_secure_cookie("uid")
         if not user_id:
@@ -81,15 +81,18 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message):
         print(str(self.uid) + " says " + str(message))
-        message = json.loads(message)
+        message = json.loads(message) #Message is in format {"method":{"expected_val":["args"]}}
         for call in list(message):  #method dictionary key
-            for case in list(message[call]): #expected return type
+            for case in list(message[call]): #expected return value
                 try:
                     assert str(self.methods[call](*message[call][case])) == str(case), "expected "+str(case)+", got "+str(self.methods[call](*message[call][case]))
                 except AssertionError as e:
                     self.write_message(str(e))
                     return
         self.write_message("passed")
+
+    def on_close(self):
+        print("Goodbye, "+str(self.uid))
 
 def main():
     server = tornado.web.Application(

@@ -26,7 +26,7 @@
 
 				<!-- action needs to be change according to the type-->
 				<form id="post" onclick='send()'>
-					<button name="add" type="submit" value="add" onclick="send()">Add</button>
+					<button name="add" type="button" value="add" onclick="addBlock()">Add</button>
 				</form>
 
 
@@ -40,78 +40,22 @@
 
 		</form>
 
-		<script src="http://code.jquery.com/jquery-1.11.0.min.js">
-                var methods = {{json}}
-				$(document).ready(function() {
-	 
-				if(!("WebSocket" in window)){
-					$('<p>Oh no, you need a browser that supports WebSockets. How about <a href="http://www.google.com/chrome">Google Chrome</a>?</p>').appendTo('#container');
-				}else{
-				//The user has WebSockets
-				
-					connect();
-			 
-					function connect(){
-						var socket;
-						var host = "ws://localhost:8080/java"; //need to change this according to python or java
-				 
-						try{
-							var socket = new WebSocket(host);
-				 
-							message('<p class="event">Socket Status: '+socket.readyState);
-				 
-							socket.onopen = function(){
-								message('<p class="event">Socket Status: '+socket.readyState+' (open)');
-							}
-				 
-							socket.onmessage = function(msg){
-								message('<p class="message">Received: '+msg.data);
-							}
-				 
-							socket.onclose = function(){
-								message('<p class="event">Socket Status: '+socket.readyState+' (Closed)');
-							}         
-				 
-						} catch(exception){
-							message('<p>Error'+exception);
-						}
-				 
-						function send(){
-							var target = document.getElementById("function").value;
-				 
-							if(text==""){
-								message('<p class="warning">Please select a function');
-								return ;
-							}
-							try{
-								socket.send(target);
-								message('<p class="event">Sent: '+text)
-				 
-							} catch(exception){
-								message('<p class="warning">');
-							}
-						}
-				 
-                        function message(msg){
-							//placeholder
-							$('#result').append(msg);
-						}
-				 
-						//$('#text').keypress(function(event) {
-						//	if (event.keyCode == '13') {
-						//		send();
-                        //	}
-						//});   
-				 		
-						//$('#disconnect').click(function(){
-						//	socket.close();
-						//});
-				 
-					}//End connect
-			 
-				}//End else
-			 
-			});
+        <script src="{{static_url('jquery-2.1.0-min.js')}}"/></script>
+        <script>
+            var methods = {{json}}
+            var ws = new WebSocket("ws://{{uri}}/pythonfuntime")
+            ws.onmessage = function(message){alert(message.data)}
+            function addBlock(){
+                var funct = methods[document.getElementById("function").value];
+                $('#result').append('<div class="block">\n');
+                $('#result').append('Function: ' + document.getElementById("function").value);
+                $('#result').append('<form class="input">\n');
+                for( i in funct[0]){
+                    $('#result').append(funct[0][i]+': <input type="text" id="' + funct[0][i] + '"/>\n');
+                }
+                $('#result').append('</div>\n');
+            }
+
 		</script>
 	</body>
 
