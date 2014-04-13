@@ -46,16 +46,33 @@
             var ws = new WebSocket("ws://{{uri}}/pythonfuntime")
             ws.onmessage = function(message){alert(message.data)}
             function addBlock(){
+                var append = "";
                 var funct = methods[document.getElementById("function").value];
-                $('#result').append('<div class="block">\n');
-                $('#result').append('Function: ' + document.getElementById("function").value);
-                $('#result').append('<form class="input">\n');
+                append = append.concat('<div class="block">\n');
+                append = append.concat('Function: ' + document.getElementById("function").value);
+                append = append.concat('<form class="input '+document.getElementById("function").value+'">\n');
                 for( i in funct[0]){
-                    $('#result').append(funct[0][i]+': <input type="text" id="' + funct[0][i] + '"/>\n');
+                    append = append.concat(funct[0][i]+': <input type="text" class="input ' + funct[0][i] + '"/>\n');
                 }
-                $('#result').append('</div>\n');
+                append = append.concat('Expected value: <input type="text" class="expected output"/>\n');
+                append = append.concat('</form>');
+                append = append.concat('<button onclick="closeBlock(this)" class="blockclose" type="button">x</button>');
+                append = append.concat('</div>\n');
+                $('#result').append(append);
+                
             }
 
+            function closeBlock(input){
+                input.parentNode.remove()
+            }
+
+            function send(){
+                response = {}
+                for(block in $.makeArray(document.getElementsByClassName("block"))){
+                    console.log($(document.getElementsByClassName("block")[block])[0].classList[0]) }
+
+
+            }
 		</script>
 	</body>
 
