@@ -7,73 +7,97 @@
 		</title>
 		<meta charset="UTF-8"/>
 		<meta name="description" content="Unit Tester will suit all your unit testing needs!" />
-        <link href="{{static_url('style.css')}}" rel="stylesheet" type="text/css">
-	</head>
+        <link href="{{static_url('css/bootstrap.min.css')}}" rel="stylesheet">
+        <style>body { padding: 90px 15px 15px; }</style>
+    </head>
 	<body>
-
-		<h1 id="title">
-			<a href="index.html">Unit Tester</a>
-		</h1>
-
-		<form >
-				
-			<div id="selection">
-				Select Function: <select name="function" size="1" id="function">
-					{% for method in methods %}
-                        <option value='{{method}}'>{{method}}</option>
-		            {%end%}	
-                    </select>
-
-				<!-- action needs to be change according to the type-->
-				<form id="post" onclick='send()'>
-					<button name="add" type="button" value="add" onclick="addBlock()">Add</button>
-				</form>
-
-
-			</div>
+        <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="container">         
+                <h1 style="width:auto" id="title">
+                    <a href="/">Unit Tester</a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    Add a Test <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu"> 
+                        {% for method in methods %}
+                        <li><a onclick='addBlock("{{method}}")'>{{method}}</a></li>
+                        {%end%}
+                    </ul>
+                </div>
+                <button class='btn btn-success' value='run' type = 'button' onclick='send()'>Run</button>
+            </h1>
+            </div>
+        </nav>
 
 			
 
 			<div id="result">
 				<!-- placeholder -->
 			</div>
-            <button value='run' type = 'button' onclick='send()'>Run</button>
-		</form>
+            </form>
 
-        <script src="{{static_url('jquery-2.1.0-min.js')}}"/></script>
+        <script src="{{static_url('jquery-2.1.0.min.js')}}"/></script>
+        <script src="{{static_url('js/bootstrap.min.js')}}"></script>
         <script>
             var methods = {{json}}
             var ws = new WebSocket("ws://{{uri}}/pythonfuntime")
-            ws.onmessage = function(message){alert(message.data)}
-            function addBlock(){
-                var append = "";
-                var funct = methods[document.getElementById("function").value];
-                append = append.concat('<div class="block '+document.getElementById("function").value+'">\n');
-                append = append.concat('Function: ' + document.getElementById("function").value);
-                append = append.concat('<form class="input '+document.getElementById("function").value+'">\n');
-                for( i in funct[0]){
-                    append = append.concat(funct[0][i]+': <input type="text" class="param ' + funct[0][i] + '"/>\n');
+            function openWebSocket(){
+                var ws = new WebSocket("ws://{{uri}}/pythonfuntime")
+            }
+            ws.onmessage = function(message){
+                console.log(message)
+                $('.panel').toggleClass('panel-success',true)
+                $('.panel').toggleClass('panel-danger',false)
+                message = JSON.parse(message.data)
+                for(var call in message){
+                    $('.'+call).toggleClass('panel-danger', true)
+                    $('.'+call).toggleClass('panel-success', false)
                 }
-                append = append.concat('Expected value: <input type="text" class="expected output"/>\n');
+            }
+            ws.onclose = function (event) {            
+                $('#status').html('Socket closed');    
+
+                retryOpeningWebSocket();
+            };
+            var retries = 0
+            function retryOpeningWebSocket(){
+                if (retries < 2) {            
+                    setTimeout(openWebSocket, 1000);            
+                    retries++;
+                }
+            }
+            function addBlock(func){
+                var append = "";
+                var funct = methods[func];
+                append = append.concat('<div class="col-md-4 panel panel-default '+func+'">\n');
+                append = append.concat('<div class="panel-heading">Function: ' + func);
+                append = append.concat('<button style="float:right" onclick="closeBlock(this)" class="blockclose" type="button">x</button></div>');
+                append = append.concat('<form class="input panel-body '+func+'"><br/>');
+                
+                for( i in funct[0]){
+                    append = append.concat('<span class="input-group-addon">'+funct[0][i]+':</span><input type="text" class="form-control param ' + funct[0][i] + '"/><br/>');
+                }
+                append = append.concat('<span class="input-group-addon">Expected value:</span><input type="text" class="expected output form-control"/>\n');
                 append = append.concat('</form>');
-                append = append.concat('<button onclick="closeBlock(this)" class="blockclose" type="button">x</button>');
                 append = append.concat('</div>\n');
                 $('#result').append(append);
                 
             }
 
-            function closeBlock(input){input.parentNode.remove()}
+            function closeBlock(input){input.parentNode.parentNode.remove()}
 
             function send(){
                 var response = {}
                 var interem = {}
-                for(block in $.makeArray(document.getElementsByClassName("block"))){
-                    var target = document.getElementsByClassName("block")[block]
-                    var parameters = $.map(target.children[0].getElementsByClassName('param'), function(i){return i.value})  
+                for(block in $.makeArray(document.getElementsByClassName("panel"))){
+                    var target = document.getElementsByClassName("panel")[block]
+                    var parameters = $.map(target.children[1].getElementsByClassName('param'), function(i){return i.value})  
                     eval('var interm = {"'+ target.getElementsByClassName('expected')[0].value + '" :['+ parameters + ']}')
-                    eval('response.'+$(target)[0].classList[1] + '= interm')}
+                    eval('response.'+$(target)[0].classList[3] + '= interm')
+                }
                 ws.send(JSON.stringify(response))
-
+                console.log(JSON.stringify(response)) 
             }
 		</script>
 	</body>

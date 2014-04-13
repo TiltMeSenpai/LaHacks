@@ -10,6 +10,7 @@ import tornado.websocket
 import subprocess
 import os.path
 import sys
+import subprocess
 import inspect
 
 from tornado.options import define, options, parse_command_line
@@ -24,11 +25,38 @@ class BaseHandler(tornado.web.RequestHandler):
         return user_id
 
 class JavaHandler(BaseHandler):
+    methods = {}
     def get(self):
         self.write("You're not doing it right")
 
     def post(self):
-        self.render("java.html")
+        print(self.request)
+        self.filepath=self.request.files['img'][0]['filename']
+        self.set_secure_cookie('file', self.filepath)
+        fileinfo = self.request.files['img'][0]
+        print("Java file recieved: "+str(fileinfo))
+        fname = fileinfo['filename']
+        with open(self.filepath, 'w') as f:
+            f.writelines([i+'\n' for i in str(fileinfo['body'])[2:-1].split('\\n')]) #For some reason, quotation marks are included. Strip them.
+        try:
+            subprocess.check_call(['javac',self.filepath])
+        except Exception as e:
+            self.write("Code did not compile")
+            print(e)
+            return
+        try:
+            analyze=subprocess.check_output(['java', 'ClassInfoAnalyzer', self.filepath[:-5]]).decode()
+            print("Analyze:", analyze )
+            print("Analyze(Sliced):", str( analyze[:-1] ))
+            #eval('self.method='+str(analyze))
+            self.methods = {}
+            [self.methods.update(i) for i in eval(analyze)]
+        except Exception as e:
+            print(e)
+            self.write("Code could not be analyzed")
+        print("Methods:", self.methods)
+        self.render("java.html",json = json.dumps(self.methods), methods = self.methods, uri = self.request.host)
+
 
 class PythonHandler(BaseHandler):
     def get(self):
@@ -54,18 +82,26 @@ class HomeHandler(BaseHandler):
         self.set_secure_cookie('uid', 'a' + str(h.hexdigest())) #Python files must start with a letter
         self.render("index.html")
 
-class JavaWebsocket(tornado.websocket.WebSocketHandler): #Not implemented yet
-    def get_current_user(self):
-        user_id = self.get_secure_cookie("uid")
-        if not user_id:
-            return None
-        return user_id
+class JavaWebsocket(tornado.websocket.WebSocketHandler):
 
     def open(self):
+        self.filename = self.get_secure_cookie('file')
         self.uid = self.get_secure_cookie('uid')
+
+    def unbox_array(self, array):
+        acc = ""
+        for i in array: acc += str(i)+','
+        return acc
 
     def on_message(self, message):
         print(str(self.uid) + " says " + str(message))
+        message = json.loads(message) #Message is in format {"method":{"expected_val":["args"]}}
+        for call in list(message):  #method dictionary key
+            for case in list(message[call]): #expected return value
+                self.write_message(str(subprocess.check_output(['java', 'SuiteGeneratorAPI', str(self.filename[:-5].decode()), str('Test'+call), str(case), str(call), self.unbox_array(message[call][case][:-1])[:-1], 'TestThingy'])))
+
+    def on_close(self):
+        print("Goodbye, "+str(self.uid))
 
 class PythonWebSocket(tornado.websocket.WebSocketHandler):
     def get_current_user(self):
@@ -85,7 +121,7 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
         for call in list(message):  #method dictionary key
             for case in list(message[call]): #expected return value
                 try:
-                    assert str(self.methods[call](*message[call][case])) == str(case), "expected "+str(case)+", got "+str(self.methods[call](*message[call][case]))
+                    assert str(self.methods[call](*message[call][case])) == str(case), '{"'+call+'":['+str(case)+','+str(self.methods[call](*message[call][case]))+']}'
                 except AssertionError as e:
                     self.write_message(str(e))
                     return
