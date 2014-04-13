@@ -37,7 +37,7 @@
 			<div id="result">
 				<!-- placeholder -->
 			</div>
-
+            <button value='run' type = 'button' onclick='send()'>Run</button>
 		</form>
 
         <script src="{{static_url('jquery-2.1.0-min.js')}}"/></script>
@@ -48,11 +48,11 @@
             function addBlock(){
                 var append = "";
                 var funct = methods[document.getElementById("function").value];
-                append = append.concat('<div class="block">\n');
+                append = append.concat('<div class="block '+document.getElementById("function").value+'">\n');
                 append = append.concat('Function: ' + document.getElementById("function").value);
                 append = append.concat('<form class="input '+document.getElementById("function").value+'">\n');
                 for( i in funct[0]){
-                    append = append.concat(funct[0][i]+': <input type="text" class="input ' + funct[0][i] + '"/>\n');
+                    append = append.concat(funct[0][i]+': <input type="text" class="param ' + funct[0][i] + '"/>\n');
                 }
                 append = append.concat('Expected value: <input type="text" class="expected output"/>\n');
                 append = append.concat('</form>');
@@ -62,15 +62,17 @@
                 
             }
 
-            function closeBlock(input){
-                input.parentNode.remove()
-            }
+            function closeBlock(input){input.parentNode.remove()}
 
             function send(){
-                response = {}
+                var response = {}
+                var interem = {}
                 for(block in $.makeArray(document.getElementsByClassName("block"))){
-                    console.log($(document.getElementsByClassName("block")[block])[0].classList[0]) }
-
+                    var target = document.getElementsByClassName("block")[block]
+                    var parameters = $.map(target.children[0].getElementsByClassName('param'), function(i){return i.value})  
+                    eval('var interm = {"'+ target.getElementsByClassName('expected')[0].value + '" :['+ parameters + ']}')
+                    eval('response.'+$(target)[0].classList[1] + '= interm')}
+                ws.send(JSON.stringify(response))
 
             }
 		</script>
