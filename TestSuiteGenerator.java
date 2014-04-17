@@ -113,7 +113,6 @@ public class TestSuiteGenerator {
         sb.append( "        boolean result = a.equals(b);\n" );
         sb.append( "        if( ! result ) {\n" );
         sb.append( "            throw new AssertionException( \"Assertion Error: a.equals(b) returned false!\");\n" );
-        //sb.append( "            throw new RuntimeException( \"Assertion Error: a.equals(b) returned false!\");\n" );
         sb.append( "        }\n" );
         sb.append( "    }\n\n" );
 
@@ -218,7 +217,6 @@ public class TestSuiteGenerator {
 
         //Add the completed template to the test cases
         this.testCases.put( "test" + testName, template );
-        //this.testCases.add( template );
     }
 
     /**
