@@ -71,7 +71,7 @@ class PythonHandler(BaseHandler):
         fname = fileinfo['filename']
         print(fileinfo['body'])
         with open("tmp/"+self.uid+".py", 'w') as f:
-            f.write(str(fileinfo['body'])) #For some reason, quotation marks are included. Strip them.
+            f.write(fileinfo['body'].decode())#For some reason, quotation marks are included. Strip them.
         clazz = imp.load_module('clazz',*imp.find_module(self.uid, ['tmp/']))
         methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz) if inspect.isfunction(i[1])} #Maps function names to input lists
         print(methods)
@@ -114,10 +114,11 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
         return user_id
 
     def open(self):
-        self.uid = self.get_secure_cookie('uid')
-        print("Python user "+self.uid.decode()+" connected")
-        clazz = list(map(__import__, ["tmp."+str(self.uid)[2:-1]])) #Dynamically import relevant file
-        self.methods = {i[0]:i[1] for i in inspect.getmembers(clazz[0]) if inspect.isfunction(i[1])} #Maps function names to input lists
+        self.uid = self.get_secure_cookie('uid').decode()
+        print(self.uid)
+        print("Python user "+self.uid+" connected")
+        clazz = imp.load_module('clazz',*imp.find_module(self.uid, ['tmp/']))
+        self.methods = {i[0]:i[1] for i in inspect.getmembers(clazz) if inspect.isfunction(i[1])} #Maps function names to input lists
 
     def on_message(self, message):
         print(str(self.uid) + " says " + str(message))
