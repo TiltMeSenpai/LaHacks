@@ -4,3 +4,4 @@ uploads/*
 *.un~
 *.swp
 *.class
+tmp/*
