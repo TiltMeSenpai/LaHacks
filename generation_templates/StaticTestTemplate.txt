@@ -1,0 +1,3 @@
+    public static void test{testName}() {
+        smartAssert({expected}, {className}.{methodName}({m_list}));
+    }

@@ -1,0 +1,4 @@
+    public static void test{testName}() {
+        {className} {name} = new {className}({cons_list});
+        smartAssert( {expected}, {name}.{methodName}({m_list}));
+    }
