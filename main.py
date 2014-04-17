@@ -21,10 +21,10 @@ define("port", 8080)
 
 class BaseHandler(tornado.web.RequestHandler):
     """""
-    Handles HTTP requests and stores a unique cookie for each user.
+    Gets and decodes current userid
     """
     def get_current_user(self):
-        user_id = self.get_secure_cookie("uid")
+        user_id = self.get_secure_cookie("uid").decode()
         if not user_id:
             return None
         return user_id
@@ -39,7 +39,7 @@ class JavaHandler(BaseHandler):
 
     # HTTP GET not defined for this handler.
     def get(self):
-        self.write("You're not doing it right")
+        self.redirect('/')
 
     # Post will handle grabbing the file, parsing it, and generating content
     def post(self):
@@ -98,15 +98,15 @@ class PythonHandler(BaseHandler):
         """""
         This handler does not handle HTTP GET requests
         """
-        self.write("Nope, still wrong")
+        self.redirect('/')
 
     def post(self):
         # Read the data from the POST request
-        self.uid = self.get_secure_cookie('uid').decode()
+        self.uid = self.get_current_user()
         fileinfo = self.request.files['img'][0]
         fname = fileinfo['filename']
 
-        # Strip quote marks and write the file
+        # Write file to procedurally generated file
         with open("tmp/" + self.uid + ".py", 'w') as f:
             f.write( fileinfo['body'].decode() )
 
@@ -123,7 +123,6 @@ class PythonHandler(BaseHandler):
                 methods.update( {member_name : args} )
 
         # Print out data from the POST request
-        print(self.request)
         print("Python file recieved: "+str(fileinfo))
         print(fileinfo['body'])
         print(methods)
@@ -176,7 +175,7 @@ class JavaWebsocket(tornado.websocket.WebSocketHandler):
         message = json.loads(message) #Message is in format {"method":{"expected_val":["args"]}}
         for call in list(message):  #method dictionary key
             for case in list(message[call]): #expected return value
-                self.write_message(str(subprocess.check_output(['java', 'SuiteGeneratorAPI', str(self.filename[:-5].decode()), str('Test'+call), str(case), str(call), self.unbox_array(message[call][case][:-1])[:-1], 'TestThingy'])))
+                self.write_message(str(subprocess.check_output(['java', 'SuiteGeneratorAPI', str(self.filename[:-5].decode()), str('Test'+call), str(case), str(call), self.unbox_array(message[call][case][:-1])[:-1], call+"Tests"])))
 
     def on_close(self):
         """""
@@ -195,7 +194,7 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
         """""
         Stores a unique cookie for each user as their user id.
         """
-        user_id = self.get_secure_cookie("uid")
+        user_id = self.get_secure_cookie("uid").decode()
         if not user_id:
             return None
         return user_id
@@ -205,7 +204,7 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
         Opens and analyzes the python file that was uploaded by the user
         """
         # Retrieve the user ID cookie
-        self.uid = self.get_secure_cookie('uid').decode()
+        self.uid = self.get_current_user()
 
         # Dynamically import the uploaded file to access its members
         clazz = imp.load_module( 'clazz', *imp.find_module(self.uid, ['tmp/']) )
@@ -231,27 +230,25 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
 
         # Parse the JSON message sent by the user.
         # Message will be formatted as: {"method":{"expected":["args"]}}
+        #   E.G: {"factorial":{"120":[5]}} would be equivalent to "assert factorial(5) == 120"
         message = json.loads(message)
+        errors = {}
         for call in list(message):  #method dictionary key
             for case in list(message[call]): #expected return value
-                try:
-                    print(self.methods[call](*message[call][case]))
 
                     # Test the actual result of the function against the expected
                     result = str( self.methods[call](*message[call][case]) )
 
-                    # Create the error message that *may* appear
-                    error = '{"' + call + '":[' + str(case) + ','
-                    error += str( self.methods[call](*message[call][case])) + ']}'
+                    # Print out the result
+                    print(result)
 
-                    # Test the actual output against the expected output
-                    assert result == str(case), error
-                except AssertionError as e:
-                    self.write_message(str(e))
-                    return
+                    # If the results doesn't equal the expected results, add a message to errors
+                    # NOTE: As is, this only allows for one test per method
+                    if not result == str(case):
+                        errors.update({call:[str(case), result]})
 
-        # If the test passed, write that message to the socket
-        self.write_message("passed")
+        # Package all test results into a single message
+        self.write_message(json.dumps(errors))
 
     def on_close(self):
         """""
