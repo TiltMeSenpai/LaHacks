@@ -37,8 +37,10 @@ class JavaHandler(BaseHandler):
     """
     methods = {}
 
-    # HTTP GET not defined for this handler.
     def get(self):
+        """"
+        HTTP GET requests will simply redirect back to the homepage
+        """
         self.redirect('/')
 
     # Post will handle grabbing the file, parsing it, and generating content
@@ -68,6 +70,7 @@ class JavaHandler(BaseHandler):
             self.write("Code did not compile")
             print(e)
             return
+
         try:
             # Analyze the class file using the java tool "ClassInfoAnalyzer"
             class_name = self.filepath[:-5]
@@ -96,11 +99,15 @@ class PythonHandler(BaseHandler):
     """
     def get(self):
         """""
-        This handler does not handle HTTP GET requests
+        HTTP GET requests will simply redirect back to the homepage
         """
         self.redirect('/')
 
     def post(self):
+        """""
+        A POST request should contain the data for a python file. This data will
+        be analyzed to retrieve information necessary for generating tests.
+        """
         # Read the data from the POST request
         self.uid = self.get_current_user()
         fileinfo = self.request.files['img'][0]
@@ -137,6 +144,10 @@ class HomeHandler(BaseHandler):
     page for the server (index.html).
     """
     def get(self):
+        """""
+        A GET request on this handler will generate a unique cookie for each
+        user.
+        """
         #Generate randomized user id for files
         h = hashlib.new('sha1')
         h.update(str(random.randint(-10000, 10000)).encode())
