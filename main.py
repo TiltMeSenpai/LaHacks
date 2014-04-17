@@ -70,7 +70,7 @@ class PythonHandler(BaseHandler):
         print("Python file recieved: "+str(fileinfo))
         fname = fileinfo['filename']
         print(fileinfo['body'])
-        with open(self.filepath, 'w') as f:
+        with open("tmp/"+self.uid+".py", 'w') as f:
             f.write(str(fileinfo['body'])) #For some reason, quotation marks are included. Strip them.
         clazz = imp.load_module('clazz',*imp.find_module(self.uid, ['tmp/']))
         methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz) if inspect.isfunction(i[1])} #Maps function names to input lists
