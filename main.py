@@ -1,4 +1,5 @@
 import tornado
+import imp
 import json
 import random
 import hashlib
@@ -37,7 +38,7 @@ class JavaHandler(BaseHandler):
         print("Java file recieved: "+str(fileinfo))
         fname = fileinfo['filename']
         with open(self.filepath, 'w') as f:
-            f.writelines([i+'\n' for i in str(fileinfo['body'])[2:-1].split('\\n')]) #For some reason, quotation marks are included. Strip them.
+            f.write(str(fileinfo['body'])) #For some reason, quotation marks are included. Strip them.
         try:
             subprocess.check_call(['javac',self.filepath])
         except Exception as e:
@@ -63,14 +64,14 @@ class PythonHandler(BaseHandler):
         self.write("Nope, still wrong")
 
     def post(self):
+        self.uid = self.get_secure_cookie('uid').decode()
         print(self.request)
         fileinfo = self.request.files['img'][0]
         print("Python file recieved: "+str(fileinfo))
         fname = fileinfo['filename']
-        with open(str(self.get_secure_cookie('uid'))[2:-1]+'.py', 'w') as f:
-            f.writelines([i+'\n' for i in str(fileinfo['body'])[2:-1].split('\\n')]) #For some reason, quotation marks are included. Strip them.
-        clazz = list(map(__import__, [str(self.get_secure_cookie('uid'))[2:-1]])) #Dynamically import relevant file
-        methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz[0]) if inspect.isfunction(i[1])} #Maps function names to input lists
+        print(fileinfo['body'])
+        clazz = imp.load_module('clazz',*imp.find_module(self.uid, ['tmp/']))
+        methods = {i[0]:[i for i in inspect.getargspec(i[1])] for i in inspect.getmembers(clazz) if inspect.isfunction(i[1])} #Maps function names to input lists
         print(methods)
         self.render("python.html", methods = methods, json = json.dumps(methods), uri = self.request.host)
 
@@ -112,7 +113,8 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
 
     def open(self):
         self.uid = self.get_secure_cookie('uid')
-        clazz = list(map(__import__, [str(self.uid)[2:-1]])) #Dynamically import relevant file
+        print("Python user "+self.uid.decode()+" connected")
+        clazz = list(map(__import__, ["tmp."+str(self.uid)[2:-1]])) #Dynamically import relevant file
         self.methods = {i[0]:i[1] for i in inspect.getmembers(clazz[0]) if inspect.isfunction(i[1])} #Maps function names to input lists
 
     def on_message(self, message):
@@ -121,6 +123,7 @@ class PythonWebSocket(tornado.websocket.WebSocketHandler):
         for call in list(message):  #method dictionary key
             for case in list(message[call]): #expected return value
                 try:
+                    print(self.methods[call](*message[call][case]))
                     assert str(self.methods[call](*message[call][case])) == str(case), '{"'+call+'":['+str(case)+','+str(self.methods[call](*message[call][case]))+']}'
                 except AssertionError as e:
                     self.write_message(str(e))

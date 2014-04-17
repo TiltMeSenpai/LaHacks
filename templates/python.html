@@ -55,11 +55,6 @@
                     $('.'+call).toggleClass('panel-success', false)
                 }
             }
-            ws.onclose = function (event) {            
-                $('#status').html('Socket closed');    
-
-                retryOpeningWebSocket();
-            };
             var retries = 0
             function retryOpeningWebSocket(){
                 if (retries < 2) {            
